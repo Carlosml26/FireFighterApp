@@ -1,0 +1,29 @@
+{
+  "name": "Equipo",
+  "plural": "Equipos",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "required": true
+    },
+    "password": {
+      "type": "string",
+      "required": true
+    },
+    "codigoDispositivo": {
+      "type": "string"
+    },
+    "incidenciaActual": {
+      "type": "string"
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

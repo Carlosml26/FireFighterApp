@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head> 
+        <title>WebRTC Text Demo</title> 
+        <meta charset="UTF-8">
+        <script src="lib/jquery/dist/jquery.js"></script>
+        <script src="lib/bootstrap/dist/js/bootstrap.js"></script>
+        <script src="lib/angular/angular.js"></script>
+        <script src="lib/angular-resource/angular-resource.js"></script>
+        <script src="js/lb-services.js"></script>        
+        <link src="lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet">
+        <script src="lib/angular-cookies/angular-cookies.js"></script>        
+        <script src="lib/angular-route/angular-route.js"></script>        
+        <link src="css/styles.css" rel="stylesheet">
+
+        <!-- Latest compiled and minified CSS -->
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+        <!-- Optional theme -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+       	<script src="js/recorderjs/recorder.js"></script>
+        <script src="js/main.js"></script>
+        <script src="js/maps/maps.js"></script>
+        <link rel="stylesheet" type="text/css" href="css/chatStyle.css"/>
+
+
+    </head>
+    <body ng-app="myItems">             
+        <div id = "loginPage" class = "container text-center"  ng-controller="myItemsController"> 
+            <div class = "row"> 
+                <div class = "col-md-4 col-md-offset-4"> 
+                    <h2>Login</h2> 
+                    <label class = "sr-only">Login</label>
+                    <input id = "usernameInput" class = "form-control formgroup" ng-model="userName" type="text" class="" aria-describedby="" aria-label="Name" aria-required="true" autocapitalize="off" autocorrect="off" maxlength="30" name="username" placeholder="Name" value="" required>                    
+                    <input id = "userpasswordInput" class = "form-control formgroup" ng-model="userPassword" type="password" show-password="showPassword" ng-model="thePassword" aria-describedby="" aria-label="Password" aria-required="true" autocapitalize="off" autocorrect="off" name="password" placeholder="Password" value="" required>                   
+                    <button id="loginBtn"  class = "btn btn-lg btn-primary btn-block" ng-click="login()">
+                        Sign in
+                    </button> 
+                    <p id="loginErrorAlert"  aria-atomic="true" role="alert"> El usuario o la contraseña son incorrectos.</p>                    
+                    
+                </div> 
+            </div> 
+        </div>
+        
+        <div id = "mainPage" class = "call-page container visible-print-block"  ng-controller="mainPageController" data-target=".navbar">
+
+<!--
+                <nav class="navbar navbar-default navbar-fixed-top">
+                        <div class="container">
+                          <div class="navbar-header">
+                            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                              <span class="icon-bar"></span>
+                              <span class="icon-bar"></span>
+                              <span class="icon-bar"></span>                        
+                            </button>
+                            <a class="navbar-brand" href="#myPage">Logo</a>
+                          </div>
+                          <div class="collapse navbar-collapse" id="myNavbar">
+                            <ul class="nav navbar-nav navbar-right">
+                                <li class="active" > <a ng-click="listarIncidencias()">Incidencias</a></li>
+                                <li > <a ng-click="addIncidencia()"> Añadir Incidencia </a>   </li>
+                                <li > <a ng-click="listarAdmins()"> Admins </a>   </li>
+                                <li > <a ng-click="listarEquipos()"> Equipos </a>   </li>
+                                <li > <a ng-click="oldIncidencias()"> Antiguas Incidencias </a>   </li>
+                            </ul>
+
+                          </div>
+                        </div>
+                      </nav>
+
+                    -->
+                      
+
+
+            <nav class="navbar navbar-inverse">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>                        
+                        </button>
+                        <a class="navbar-brand" href="#">Logo</a>
+                    </div>
+                    <div class="collapse navbar-collapse" id="myNavbar">
+                        <ul class="nav navbar-nav">
+                            <li class="active" > <a ng-click="listarIncidencias()">Incidencias</a></li>
+                            <li > <a ng-click="addIncidencia()"> Añadir Incidencia </a>   </li>
+                            <li > <a ng-click="listarAdmins()"> Admins </a>   </li>
+                            <li > <a ng-click="listarEquipos()"> Equipos </a>   </li>
+                            <li > <a ng-click="oldIncidencias()"> Antiguas Incidencias </a>   </li>
+            
+                        </ul>
+                        <ul class="nav navbar-nav navbar-right">
+                            <li><a ng-click="desconectar()"><span class="glyphicon glyphicon-log-in"></span> Log out</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </nav> 
+                  
+                
+            <div class="container-fluid text-center">
+                <div id="listadoIncidenciasPage"  class="row content">
+                    <div id="mapRow" class="col-md-4">
+                            <div id="map"></div>                        
+                    </div>
+                    <div id="incidenciasRow" class="col-md-4">
+                        <div class="list-group">
+                            <div ng-repeat="i in incidencias">
+                                <div class="btn-group btn-group-justified">
+                                    <div class="btn-group"> <!-- oie xava tira por aki -->
+                                        <button id="buttonAccessChat-{{ i.titulo }}" type="button" class="btn btn-default" ng-click="abrirIncidencia($index)" > {{ i.titulo }} </button> 
+                                    </div>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-danger" ng-click="borrarIncidencia($index)"> Finalizar </button>     
+                                    </div>    
+                                </div>                                
+                            </div>
+                            <button class="list-group-item" ng-click="addIncidencia()"> Añadir Incidencia </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                            <div class="list-group">
+                                <div ng-repeat="i in usuariosConectado">
+                                        <button type="button" class="btn btn-default" ng-click="abrirChatUsuario($index)" > {{ i.nombre }} </button>                                         
+                                </div>
+                            </div>
+                    </div>   
+                    <div id="addIncidenciaRow" class="col-md-4 visible-print-block">
+                        <form ng-submit="guardarIncidencia()">
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-text-width"></i></span>
+                                <input id="tituloIncidencia" type="text" class="form-control" ng-model="tituloIncidencia" placeholder="titulo" required>
+                           </div>
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-calendar"></i></span>
+                                <input id ="fechaIncidencia" class="form-control" type="date" ng-model="CurrentDate" disabled>
+                            </div>
+                            <div class="input-group">
+                                    <span class="input-group-addon"><i class="glyphicon glyphicon-align-justify"></i></span>
+                                    <input id="descripcionIncidencia" type="text" class="form-control" ng-model="descripcionIncidencia" placeholder="Descripcion">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-globe"></i></span>
+                                <input type="button" id="direccionIncidencia"  class="form-control" placeholder="Direccion" ng-click="addDireccion()" value="Añadir direccion"> 
+                            </div>
+                            <div class="input-group">
+                                    <span class="input-group-addon"><i class="glyphicon glyphicon-grain"></i></span>
+                                    <input id="topologiaIncidencia" type="text" class="form-control" ng-model="topologiaIncidencia" placeholder="topologia">
+                            </div>
+                            <div class="input-group">
+                                    <span class="input-group-addon"><i class="glyphicon glyphicon-exclamation-sign"></i></span>
+                                    <input id="prioridadIncidencia" type="text" class="form-control" ng-model="prioridadIncidencia" placeholder="prioridad">
+                            </div>
+                            <label> Selecciona equipos: </label>  
+
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>                                        
+                                <select id="sel1" multiple class="form-control" name="repeatEquiposSelect" ng-model="equiposSeleccionados">
+                                        <option ng-repeat="equipo in equipos" value="{{equipo.nombre}}">{{equipo.nombre}}</option>
+                                </select>
+                            </div>
+
+
+                            <button type="submit" class="btn btn-default"> Crear </button>                            
+                        </form>
+                        <button class="btn btn-default" ng-click="volverIncidencias()"> Volver </button>
+
+                    </div>
+                    <div id="createAdminRow" class="col-md-4 visible-print-block" >
+                        <div id="listadoAdmins" class="list-group">
+                            <div ng-repeat="i in admins">
+                                <div class="btn-group btn-group-justified"> 
+                                    <div class="btn-group">                                   
+                                        <button type="button" class="btn btn-default" ng-click="editarAdmin($index)" > {{ i.name }} </button> 
+                                    </div>
+                                    <div class="btn-group">                                                                               
+                                        <button type="button" class="btn btn-danger" ng-click="borrarAdmin($index)">Borrar</button>                                     
+                                    </div>
+                                </div>  
+                            </div>
+                            <button class="list-group-item" ng-click="addAdmin()"> Añadir admin </a>
+                        </div>
+                        <div id="formCreateAdmin" class="visible-print-block">
+                            <form ng-submit="guardarAdmin()" >
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+                                    <input id="nombreAdmin" type="text" class="form-control" ng-model="nombreAdmin" placeholder="Nombre" required>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+                                    <input id ="passwordAdmin" class="form-control" type="text" ng-model="passwordAdmin" placeholder="Contraseña" required>
+                                </div>
+                                <button type="submit" class="btn btn-default"> Guardar </button> 
+                                <p id="resultadoCreateAdmin" class="visible-print-block" aria-atomic="true" role="alert"> </p>                                                                        
+                            </form>
+                            <button ng-click="volverAdmins()" class="btn btn-default"> Volver </button>                             
+                        </div>
+                    </div>
+                    <div id="createEquipoRow" class="col-md-4 visible-print-block" >
+                        <div id="listadoEquipos" class="list-group">
+                            
+                            <div ng-repeat="i in equipos">
+                                <div class="btn-group btn-group-justified">
+                                    <div class="btn-group">                                    
+                                        <button type="button" class="btn btn-default" ng-click="editarEquipo($index)" > {{ i.nombre }} </button> 
+                                    </div>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-danger" ng-click="borrarEquipo($index)">Borrar</button>                                     
+                                    </div>
+                                </div>  
+                           </div>
+                            <button class="list-group-item" ng-click="addEquipo()"> Añadir Equipo </a>
+                        </div>
+                        <div id="formCreateEquipo" class="visible-print-block">
+                            <form  ng-submit="guardarEquipo()">
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+                                    <input id="nombreEquipo" type="text" class="form-control" ng-model="nombreEquipo" placeholder="Nombre" required>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+                                    <input id ="passwordEquipo" class="form-control" type="text" ng-model="passwordEquipo" placeholder="Contraseña" required>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+                                    <input id ="codigoDispositivoEquipo" class="form-control" type="text" ng-model="codigoDispositivoEquipo" placeholder="Codigo Dispositivo">
+                                </div>
+                                <button type="submit" class="btn btn-default"> Guardar </button> 
+                                <p id="resultadoCreateEquipo" class="visible-print-block" aria-atomic="true" role="alert"> </p>                                                                        
+                            </form> 
+                            <button ng-click="volverEquipos()" class="btn btn-default"> Volver </button>
+                        </div>
+                    </div>
+                    <div id="antiguasIncidenciasRow" class="col-md-4 visible-print-block" >
+                        <div id="listadoAntiguasIncidencias" class="list-group">
+                            <div ng-repeat="i in antiguasIncidencias">
+                                <div class="btn-group btn-group-justified">
+                                    <div class="btn-group"> <!-- oie xava tira por aki -->
+                                        <button type="button" class="btn btn-default" ng-click="abrirAntiguaIncidencia($index)" > {{ i.titulo }} | {{ i.fecha  | date:'shortDate'}} </button>                                                        
+                                    </div> 
+                                    <div class="btn-group"> 
+                                        <button type="button" class="btn btn-danger" ng-click="borrarAntiguaIncidenciaDirecto($index)" > Borrar </button>                                                        
+                                    </div>    
+                                </div> 
+                            </div>
+                            <div class="btn-group btn-group-justified">
+                                <div class="btn-group">
+                                    <button  type="button" class="btn btn-primary" ng-click="mostrarAnterioresIncidencias()"> Anterior </button>
+                                </div>
+                                <div class="btn-group">
+                                    <button  type="button" class="btn btn-primary" ng-click="mostrarSiguientesIncidencias()"> Siguiente </button>
+                                </div>
+                            </div> 
+                        </div>
+                        <div id="antiguaIncidencia" class="visible-print-block">
+                            <ul class="list-group" ng-model="antiguaIncidencia">
+                                Titulo: 
+                                <li class="list-group-item" > 
+                                {{ antiguaIncidencia.titulo }}  
+                                </li>
+                                Fecha: 
+                                <li class="list-group-item" type="date"> {{ antiguaIncidencia.fecha | date : "short" }}</li>
+                                Descripcion:
+                                <li class="list-group-item">  {{ antiguaIncidencia.descripcion }}</li>
+                                Topologia:
+                                <li class="list-group-item"> {{ antiguaIncidencia.topologia }}</li>
+                                Prioridad:
+                                <li class="list-group-item"> {{ antiguaIncidencia.prioridad }}</li>                                
+                                Participantes:
+                                <li class="list-group-item" ng-repeat="participante in antiguaIncidencia.participantes"> {{ participante }}</li>   
+                                Problemas:
+                                <li class="list-group-item"> {{ antiguaIncidencia.problemas }}</li>
+                            </ul>
+                            <button class="btn btn-default" ng-click="borrarAntiguaIncidencia()"> Borrar </button>                            
+                            <button class="btn btn-default" ng-click="volverAntiguasIncidencias()"> Volver </button>
+        
+                        </div>
+                    </div>
+                    <div id="chatRow" class = "col-md-4 visible-print-block" > 
+                        
+                        <div class = "panel panel-primary"> 
+
+                            <div id="grupoBotonesChat" class="btn-group btn-group-justified">
+    <!-- chat grupal de todos los participantes                             
+                                <div id="btn-groupgrupo" class="btn-group">
+                                    <button id="botonGrupo" type="button" class="btn btn-primary"> Chat Grupo </button>
+                                </div>
+                            -->
+                            </div> 
+                            <br/>
+                            <div id="chatsPanel" class="chatlogs">
+    <!--
+                                <div id="chatgrupoPanel" class="panel-body" data-spy="scroll" data-target=".navbar" data-offset="50">
+                                    <ul id="chatgrupo" class="chat"> </ul>
+                                </div>
+                            -->
+                            </div>       
+                    
+                            <div class="panel-footer">
+                                <div class="input-group">   
+                                    <input id="Mensaje" type="text" class="form-control input-sm" placeholder="Type your message here..." />
+                                    <span class="input-group-btn">
+                                        <button  id="botonEnviar" class="btn-success btn" >
+                                            Send
+                                        </button>
+                                    </span>
+                                    <span id="record2"   onmousedown="toggleRecording(this);" onmouseup="toggleRecording(this);" >
+                                    <span data-icon="ptt" class="">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                                                <path id="pathMicrofono" style="fill:#263238" fill-opacity=".45" d="M11.999 14.942c2.001 0 3.531-1.53 3.531-3.531V4.35c0-2.001-1.53-3.531-3.531-3.531S8.469 2.35 8.469 4.35v7.061c0 2.001 1.53 3.531 3.53 3.531zm6.238-3.53c0 3.531-2.942 6.002-6.237 6.002s-6.237-2.471-6.237-6.002H3.761c0 4.001 3.178 7.297 7.061 7.885v3.884h2.354v-3.884c3.884-.588 7.061-3.884 7.061-7.885h-2z">
+                                                </path>
+                                        </svg>
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div> 
+
+                    </div> 
+
+
+                </div>
+            </div>
+
+            
+            <script async defer
+                    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBJk-JfSGRdKs9M0tYhNbEta8nHEneYXbo&callback=initMap">
+            </script>
+        </div> 
+
+ <!--       <script src="js/app.js" ></script>      -->   
+     <script src = "js/cliente/clienteAdmin.js"></script> 
+     <script src = "js/app.js"></script> 
+ 
+        <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+
+        <div style="display:none" id="plantilla" >
+                <div >
+                    <div class="container-chat">
+                        <div class="w3-cell-row">
+                                <span class="nombre-persona-chat Nombre">
+                                        Jack Sparrow
+                                    </span>
+                                    <div class="hora-chat">
+                                        <span class="text-muted Tiempo">
+                                            12/02/2015
+                                        </span>
+                                    </div> 
+                        </div>
+                        <div class="texto-chat">
+                            <span class="Mensaje">
+                                Mensaje
+                            </span>
+                        </div>
+        
+                    </div>               
+                </div>
+            </div>
+
+            <div style="display:none" id="plantilla2" class="left clearfix">
+                    <div id="mensajeAudio">
+                        <div class="container-chat">
+                            <div class="w3-cell-row">
+                                <span class="nombre-persona-chat Nombre">
+                                    Jack Sparrow
+                                </span>
+                                <div class="hora-chat">
+                                    <span class="text-muted Tiempo">
+                                        12/02/2015
+                                    </span>
+                                </div> 
+                            </div>
+                            <div class="texto-chat">
+                                <audio id="audio" class="Audio" src="#"></audio>
+                                <button id="botonAudio" onclick="document.getElementById('audio').play()" class="boton-audio"> ► </button>
+                            </div>
+                        
+                        </div>               
+                    </div>
+                </div>
+
+</body>
+</html>

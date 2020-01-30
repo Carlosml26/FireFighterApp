@@ -1,0 +1,54 @@
+{
+  "name": "Incidencia",
+  "plural": "Incidencias",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "required": true
+    },
+    "fecha": {
+      "type": "date",
+      "required": true
+    },
+    "descripcion": {
+      "type": "string"
+    },
+    "participantes": {
+      "type": [
+        "string"
+      ],
+      "required": true
+    },
+    "topologia": {
+      "type": "string"
+    },
+    "prioridad": {
+      "type": "number"
+    },
+    "latitud": {
+      "type": "number"
+    },
+    "longitud":{
+      "type":"number"
+    },
+    "problemas": {
+      "type": "string"
+    },
+    "activa": {
+      "type": "boolean",
+      "default": true
+    },
+    "direccion": {
+      "type": "string"
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}
