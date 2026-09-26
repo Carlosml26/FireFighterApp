@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Brigada Málaga</title>
+  <rect width="512" height="512" rx="112" fill="#0d1117"/>
+  <g transform="translate(64 40) scale(8)">
+    <clipPath id="s"><path d="M24 2 44 9v17c0 14-9 23.5-20 28C13 49.5 4 40 4 26V9Z"/></clipPath>
+    <g clip-path="url(#s)"><rect width="48" height="56" fill="#6d2a86"/><path d="M48 0v56H0Z" fill="#0b8a47"/></g>
+    <path d="M24 2 44 9v17c0 14-9 23.5-20 28C13 49.5 4 40 4 26V9Z" fill="none" stroke="#fff" stroke-width="2.4"/>
+    <path d="M24 44c6 0 10-4 10-10 0-5-3-8-5-10.5-.6 2.6-1.9 4.3-3.5 4.8.6-5-1.4-9.6-5.8-13 0 5-5.7 8.9-5.7 15.8C14 38.6 18 44 24 44Z" fill="#e3261d" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 44c-2.5 0-4.3-1.9-4.3-4.6 0-2.9 2.3-4.4 3.2-6.8 2.3 1.7 5.4 3.7 5.4 6.8 0 2.7-1.8 4.6-4.3 4.6Z" fill="#ffc53d"/>
+  </g>
+</svg>

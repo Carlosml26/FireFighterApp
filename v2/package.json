@@ -1,0 +1,27 @@
+{
+  "name": "@firefighter-app/core",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Brigada Málaga: local coordination console, SQLite persistence and direct WebRTC communications",
+  "type": "module",
+  "engines": {
+    "node": ">=24.19.0"
+  },
+  "scripts": {
+    "check": "node scripts/check.js",
+    "start": "node src/http-server.js",
+    "test": "node --test test/*.test.js",
+    "test:e2e": "playwright test",
+    "format": "prettier --write \"src/**/*.js\" \"public/console/**/*.{js,css,html}\" \"test/**/*.js\" \"e2e/**/*.js\" \"scripts/**/*.js\" playwright.config.js",
+    "format:check": "prettier --check \"src/**/*.js\" \"public/console/**/*.{js,css,html}\" \"test/**/*.js\" \"e2e/**/*.js\" \"scripts/**/*.js\" playwright.config.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "leaflet": "1.9.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "prettier": "3.9.9",
+    "yaml": "2.9.1"
+  }
+}
