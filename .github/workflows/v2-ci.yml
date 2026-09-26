@@ -1,0 +1,49 @@
+name: V2 CI
+
+on:
+  pull_request:
+    paths:
+      - "v2/**"
+      - ".github/workflows/v2-ci.yml"
+  push:
+    branches: [master]
+    paths:
+      - "v2/**"
+      - ".github/workflows/v2-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: v2/package-lock.json
+      - name: Install from lockfile
+        working-directory: v2
+        run: npm ci --ignore-scripts
+      - name: Syntax and tests
+        working-directory: v2
+        run: npm run check && npm run format:check && npm test
+      - name: Production dependency audit
+        working-directory: v2
+        run: npm audit --omit=dev
+      - name: Install Chromium
+        working-directory: v2
+        run: npx playwright install --with-deps chromium
+      - name: Browser workflows and real WebRTC
+        working-directory: v2
+        run: npm run test:e2e
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-evidence
+          path: v2/test-results/
+          retention-days: 7

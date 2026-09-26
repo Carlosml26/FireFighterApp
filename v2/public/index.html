@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#10171d">
+    <meta
+      name="description"
+      content="Development operations console for the FireFighterApp V2 reference core."
+    >
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    >
+    <title>Brigada Málaga · Operations Console</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to operations</a>
+
+    <header class="app-header">
+      <div class="brand-lockup" aria-label="Brigada Málaga operations console">
+        <span class="brand-mark" aria-hidden="true">BM</span>
+        <span>
+          <strong>Brigada Málaga</strong>
+          <small>V2 operations console</small>
+        </span>
+      </div>
+
+      <div class="header-status">
+        <span id="connection-state" class="connection-pill is-loading" role="status">
+          Connecting
+        </span>
+        <button id="refresh-button" class="button button-quiet button-small" type="button">
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <div class="safety-banner" role="note">
+      <strong>Development reference only.</strong>
+      In-memory data, simulated header identity, and a schematic map. Not approved for live
+      emergency response or navigation.
+    </div>
+
+    <div class="app-frame">
+      <aside class="rail" aria-label="Workspace controls">
+        <nav class="view-nav" aria-label="Operations views" role="tablist">
+          <button
+            id="tab-dispatcher"
+            class="nav-item is-active"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="view-dispatcher"
+            data-view="dispatcher"
+          >
+            <span class="nav-icon" aria-hidden="true">D</span>
+            <span>Dispatch</span>
+          </button>
+          <button
+            id="tab-field"
+            class="nav-item"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="view-field"
+            data-view="field"
+          >
+            <span class="nav-icon" aria-hidden="true">F</span>
+            <span>Field unit</span>
+          </button>
+          <button
+            id="tab-audit"
+            class="nav-item"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="view-audit"
+            data-view="audit"
+          >
+            <span class="nav-icon" aria-hidden="true">A</span>
+            <span>Audit</span>
+          </button>
+        </nav>
+
+        <section class="identity-card" aria-labelledby="identity-title">
+          <div class="eyebrow" id="identity-title">Development identity</div>
+          <label for="actor-id">Actor ID</label>
+          <input id="actor-id" name="actor-id" maxlength="160" autocomplete="off">
+          <dl class="identity-claims">
+            <div>
+              <dt>Role header</dt>
+              <dd id="actor-role">dispatcher</dd>
+            </div>
+            <div id="unit-claim-row" hidden>
+              <dt>Unit header</dt>
+              <dd id="actor-unit">Not selected</dd>
+            </div>
+          </dl>
+          <p>
+            Sends <code>x-actor-id</code>, <code>x-actor-role</code>, and, for crews,
+            <code>x-unit-id</code>. This is not production authentication.
+          </p>
+        </section>
+
+        <div class="sync-meta">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="last-sync">No state received yet</span>
+        </div>
+      </aside>
+
+      <main id="main-content" class="workspace" tabindex="-1">
+        <section id="alert-region" class="alert-region" aria-live="polite" aria-atomic="true"></section>
+
+        <section id="dispatcher-summary" class="summary-grid" aria-label="Operational summary">
+          <article class="metric-card">
+            <span>Open incidents</span>
+            <strong id="metric-incidents">—</strong>
+            <small id="metric-critical">Awaiting state</small>
+          </article>
+          <article class="metric-card">
+            <span>Available units</span>
+            <strong id="metric-available">—</strong>
+            <small id="metric-total-units">Awaiting state</small>
+          </article>
+          <article class="metric-card">
+            <span>Awaiting response</span>
+            <strong id="metric-pending">—</strong>
+            <small>Pending assignments</small>
+          </article>
+          <article class="metric-card">
+            <span>Fresh positions</span>
+            <strong id="metric-fresh">—</strong>
+            <small>Captured within 30 seconds</small>
+          </article>
+        </section>
+
+        <section id="map-panel" class="panel map-panel" aria-labelledby="map-heading">
+          <div class="panel-heading map-heading-row">
+            <div>
+              <span class="eyebrow">Shared operational picture</span>
+              <h1 id="map-heading">Málaga response area</h1>
+            </div>
+            <span class="warning-chip">Schematic preview · not navigation</span>
+          </div>
+
+          <figure class="map-figure">
+            <svg
+              id="operations-map"
+              class="operations-map"
+              viewBox="0 0 1000 600"
+              role="img"
+              aria-labelledby="map-title map-description"
+            >
+              <title id="map-title">Schematic map of the Málaga response area</title>
+              <desc id="map-description">
+                Approximate projection of reported incident and unit coordinates. It is not a
+                street map and must not be used for navigation.
+              </desc>
+              <defs>
+                <pattern id="map-grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                  <path class="map-grid-line" d="M 50 0 L 0 0 0 50"></path>
+                </pattern>
+                <filter id="marker-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity="0.35"></feDropShadow>
+                </filter>
+              </defs>
+              <rect class="map-land" width="1000" height="600"></rect>
+              <rect class="map-grid" width="1000" height="600"></rect>
+              <path
+                class="map-water"
+                d="M0 500 C130 475 235 535 350 505 C520 460 650 525 785 485 C875 460 935 475 1000 455 L1000 600 L0 600 Z"
+              ></path>
+              <path class="map-road map-road-primary" d="M35 345 C230 285 440 322 615 260 S840 180 980 205"></path>
+              <path class="map-road" d="M90 125 C260 195 370 225 520 420"></path>
+              <path class="map-road" d="M285 70 C385 210 565 260 860 390"></path>
+              <path class="map-road" d="M40 425 C260 390 515 432 765 355 S925 320 1000 330"></path>
+              <path class="map-river" d="M560 0 C530 145 585 235 550 350 S520 470 550 510"></path>
+              <g class="map-labels" aria-hidden="true">
+                <text x="72" y="96">Teatinos</text>
+                <text x="395" y="162">Centro</text>
+                <text x="690" y="128">El Palo</text>
+                <text x="172" y="410">Carretera de Cádiz</text>
+                <text x="470" y="560">Mar de Alborán</text>
+                <text class="map-axis-label" x="20" y="25">36.76° N</text>
+                <text class="map-axis-label" x="20" y="585">36.66° N</text>
+                <text class="map-axis-label" x="875" y="585">4.32° W</text>
+              </g>
+              <g id="map-links" class="map-links" aria-hidden="true"></g>
+              <g id="map-markers" class="map-markers"></g>
+            </svg>
+            <div id="map-empty" class="map-empty" hidden>No unit positions or incidents to plot.</div>
+            <figcaption>
+              <span id="map-summary">Waiting for state</span>
+              <span class="map-legend" aria-label="Map legend">
+                <span><i class="legend-dot legend-incident" aria-hidden="true"></i>Incident</span>
+                <span><i class="legend-dot legend-unit" aria-hidden="true"></i>Unit</span>
+                <span><i class="legend-line" aria-hidden="true"></i>Dispatch association</span>
+              </span>
+            </figcaption>
+          </figure>
+        </section>
+
+        <section
+          id="view-dispatcher"
+          class="view-panel"
+          role="tabpanel"
+          aria-labelledby="tab-dispatcher"
+        >
+          <div class="dispatch-grid">
+            <section class="panel list-panel" aria-labelledby="incidents-title">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <span class="eyebrow">Queue</span>
+                  <h2 id="incidents-title">Incidents</h2>
+                </div>
+                <span id="incident-count" class="count-badge">0</span>
+              </div>
+              <div id="incident-list" class="entity-list" aria-live="polite"></div>
+            </section>
+
+            <section class="panel list-panel" aria-labelledby="units-title">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <span class="eyebrow">Resources</span>
+                  <h2 id="units-title">Units</h2>
+                </div>
+                <span id="unit-count" class="count-badge">0</span>
+              </div>
+              <div id="unit-list" class="entity-list" aria-live="polite"></div>
+            </section>
+
+            <section class="panel action-panel" aria-labelledby="dispatch-action-title">
+              <div class="panel-heading">
+                <span class="eyebrow">Command</span>
+                <h2 id="dispatch-action-title">Dispatch assignment</h2>
+              </div>
+              <div class="selection-pair">
+                <div>
+                  <span>Incident</span>
+                  <strong id="selected-incident-name">Select an incident</strong>
+                </div>
+                <span class="selection-arrow" aria-hidden="true">→</span>
+                <div>
+                  <span>Unit</span>
+                  <strong id="selected-unit-name">Select an available unit</strong>
+                </div>
+              </div>
+              <p id="assign-help" class="form-help">Select an open incident and available unit.</p>
+              <button id="assign-button" class="button button-primary button-block" type="button" disabled>
+                Assign selected unit
+              </button>
+
+              <div id="cancel-assignment-section" class="sub-action" hidden>
+                <h3>Cancel active assignment</h3>
+                <p id="cancel-assignment-help" class="form-help"></p>
+                <form id="cancel-assignment-form">
+                  <label for="cancel-reason">Recall reason</label>
+                  <textarea id="cancel-reason" name="reason" rows="2" maxlength="500" required></textarea>
+                  <button class="button button-danger" type="submit">
+                    Cancel assignment and release unit
+                  </button>
+                </form>
+              </div>
+
+              <div id="incident-close-section" class="sub-action" hidden>
+                <h3>Close selected incident</h3>
+                <p id="close-eligibility" class="form-help"></p>
+                <form id="close-incident-form">
+                  <label for="close-reason">Operational close reason</label>
+                  <textarea id="close-reason" name="reason" rows="2" maxlength="1000" required></textarea>
+                  <button id="close-incident-button" class="button button-danger" type="submit">
+                    Close incident
+                  </button>
+                </form>
+              </div>
+            </section>
+          </div>
+
+          <section class="panel creation-panel" aria-labelledby="creation-title">
+            <div class="panel-heading">
+              <span class="eyebrow">Setup</span>
+              <h2 id="creation-title">Create operational records</h2>
+            </div>
+            <div class="creation-grid">
+              <details>
+                <summary>Register a unit</summary>
+                <form id="create-unit-form" class="stack-form">
+                  <div class="form-grid two-column">
+                    <label>
+                      Unit name
+                      <input name="name" maxlength="120" placeholder="Pump crew 1" required>
+                    </label>
+                    <label>
+                      Call sign
+                      <input name="callSign" maxlength="40" placeholder="B-01" required>
+                    </label>
+                  </div>
+                  <label>
+                    Capabilities
+                    <input name="capabilities" placeholder="pump, rescue, medical">
+                    <span class="field-hint">Comma-separated; up to 30 capabilities.</span>
+                  </label>
+                  <button class="button button-primary" type="submit">Register unit</button>
+                </form>
+              </details>
+
+              <details>
+                <summary>Create an incident</summary>
+                <form id="create-incident-form" class="stack-form">
+                  <div class="form-grid two-column">
+                    <label>
+                      Incident title
+                      <input name="title" maxlength="160" placeholder="Reported structure fire" required>
+                    </label>
+                    <label>
+                      Priority
+                      <select name="priority" required>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                      </select>
+                    </label>
+                  </div>
+                  <label>
+                    Description
+                    <textarea name="description" rows="3" maxlength="4000" placeholder="Verified details and access notes"></textarea>
+                  </label>
+                  <div class="form-grid three-column">
+                    <label>
+                      Latitude
+                      <input name="latitude" type="number" min="-90" max="90" step="0.000001" value="36.721300" required>
+                    </label>
+                    <label>
+                      Longitude
+                      <input name="longitude" type="number" min="-180" max="180" step="0.000001" value="-4.421400" required>
+                    </label>
+                    <label>
+                      Accuracy (m)
+                      <input name="accuracyMeters" type="number" min="1" max="10000" step="1" value="25" required>
+                    </label>
+                  </div>
+                  <label>
+                    Known hazards
+                    <input name="hazards" placeholder="gas cylinders, limited access">
+                    <span class="field-hint">Comma-separated; verify before dispatch.</span>
+                  </label>
+                  <button class="button button-primary" type="submit">Create incident</button>
+                </form>
+              </details>
+            </div>
+          </section>
+        </section>
+
+        <section
+          id="view-field"
+          class="view-panel"
+          role="tabpanel"
+          aria-labelledby="tab-field"
+          hidden
+        >
+          <div class="field-grid">
+            <section class="panel field-overview" aria-labelledby="field-unit-title">
+              <div class="panel-heading">
+                <span class="eyebrow">Crew context</span>
+                <h2 id="field-unit-title">Field unit</h2>
+              </div>
+              <label for="field-unit-select">Acting unit</label>
+              <select id="field-unit-select">
+                <option value="">No units registered</option>
+              </select>
+              <div id="field-unit-summary" class="field-unit-summary"></div>
+            </section>
+
+            <section class="panel" aria-labelledby="assignment-title">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <span class="eyebrow">Current task</span>
+                  <h2 id="assignment-title">Assignment</h2>
+                </div>
+                <span id="field-assignment-status" class="status-badge status-neutral">None</span>
+              </div>
+              <div id="field-assignment-detail" class="assignment-detail"></div>
+              <div id="assignment-response-controls" hidden>
+                <div class="button-row">
+                  <button id="acknowledge-button" class="button button-primary" type="button">
+                    Acknowledge
+                  </button>
+                </div>
+                <form id="reject-assignment-form" class="inline-form">
+                  <label for="rejection-reason">Reason to reject</label>
+                  <div>
+                    <input id="rejection-reason" name="reason" maxlength="500" required>
+                    <button class="button button-danger" type="submit">Reject</button>
+                  </div>
+                </form>
+              </div>
+            </section>
+
+            <section class="panel" aria-labelledby="status-title">
+              <div class="panel-heading">
+                <span class="eyebrow">Readiness</span>
+                <h2 id="status-title">Unit status</h2>
+              </div>
+              <p id="current-unit-status" class="large-status">Select a unit</p>
+              <div id="status-actions" class="button-row" aria-label="Allowed status transitions"></div>
+              <p id="status-help" class="form-help">
+                Only server-authorized next states are offered.
+              </p>
+            </section>
+
+            <section class="panel location-panel" aria-labelledby="location-title">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <span class="eyebrow">Position report</span>
+                  <h2 id="location-title">Location</h2>
+                </div>
+                <span id="location-freshness" class="status-badge status-neutral">Unknown</span>
+              </div>
+              <p id="location-summary" class="location-summary">No position reported.</p>
+              <button id="browser-location-button" class="button button-primary" type="button">
+                Send browser position
+              </button>
+              <p class="form-help">
+                Position is requested and sent only when you press the button. Browser permission is
+                required.
+              </p>
+              <details>
+                <summary>Enter a position manually</summary>
+                <form id="manual-location-form" class="stack-form">
+                  <div class="form-grid three-column">
+                    <label>
+                      Latitude
+                      <input name="latitude" type="number" min="-90" max="90" step="0.000001" required>
+                    </label>
+                    <label>
+                      Longitude
+                      <input name="longitude" type="number" min="-180" max="180" step="0.000001" required>
+                    </label>
+                    <label>
+                      Accuracy (m)
+                      <input name="accuracyMeters" type="number" min="1" max="10000" step="1" value="50" required>
+                    </label>
+                  </div>
+                  <button class="button button-secondary" type="submit">Send manual position</button>
+                </form>
+              </details>
+            </section>
+          </div>
+        </section>
+
+        <section
+          id="view-audit"
+          class="view-panel"
+          role="tabpanel"
+          aria-labelledby="tab-audit"
+          hidden
+        >
+          <section class="panel audit-panel" aria-labelledby="audit-title">
+            <div class="panel-heading audit-heading">
+              <div>
+                <span class="eyebrow">Append-only record</span>
+                <h1 id="audit-title">Audit events</h1>
+                <p>Read-only operational command history from the current in-memory session.</p>
+              </div>
+              <span id="audit-count" class="count-badge">0</span>
+            </div>
+            <div class="audit-filters">
+              <label>
+                Filter events
+                <input id="audit-search" type="search" placeholder="Type, actor, or subject">
+              </label>
+              <label>
+                Event type
+                <select id="audit-type-filter">
+                  <option value="all">All event types</option>
+                </select>
+              </label>
+            </div>
+            <ol id="audit-list" class="audit-list" aria-live="polite"></ol>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <footer class="app-footer">
+      <span>FireFighterApp V2 reference interface</span>
+      <span>Existing radio and dispatch procedures remain the fallback.</span>
+    </footer>
+  </body>
+</html>

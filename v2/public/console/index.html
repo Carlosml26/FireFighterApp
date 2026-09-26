@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0d1117" />
+    <meta
+      name="description"
+      content="Brigada Málaga. Centro de mando de bomberos: intervenciones, dotaciones y comunicación directa. Entorno local de entrenamiento."
+    />
+    <title>Brigada Málaga · Centro de mando</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/vendor/leaflet.css" />
+    <link rel="stylesheet" href="/console/styles.css" />
+    <script src="/vendor/leaflet.js" defer></script>
+    <script type="module" src="/console/app.js"></script>
+  </head>
+  <body data-view="dispatch">
+    <a class="skip-link" href="#main">Ir al contenido</a>
+    <aside class="sidebar">
+      <a class="brand" href="#dispatch" aria-label="Brigada Málaga, inicio"
+        ><span id="brand-logo"></span
+        ><span class="brand-text"
+          ><strong>BRIGADA MÁLAGA</strong
+          ><small>Bomberos · Centro de mando</small></span
+        ></a
+      >
+      <nav aria-label="Navegación principal" id="navigation"></nav>
+      <div class="sidebar-bottom">
+        <div class="clock" aria-live="off">
+          <strong id="clock">--:--</strong><span id="clock-date"></span>
+        </div>
+        <button
+          type="button"
+          id="theme-toggle"
+          class="theme-toggle"
+          aria-label="Cambiar a modo día"
+        ></button>
+        <span class="version">V2 · 36°43′N 4°25′O</span>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-title">
+          <span id="mobile-logo" class="mobile-logo"></span>
+          <div>
+            <span class="eyebrow" id="eyebrow"
+              >Coordinación en tiempo real</span
+            >
+            <h1 id="page-title">Central de operaciones</h1>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <span id="notice" class="notice" role="status">Cargando…</span>
+          <span class="connection" id="connection" role="status"
+            >Conectando…</span
+          ><label class="profile-label"
+            ><span class="profile-caption">Perfil</span
+            ><select id="profile" aria-label="Perfil local">
+              <option value="dispatcher">Central · coordinación</option>
+              <option value="system_admin">Administración</option>
+            </select></label
+          >
+          <div id="page-actions"></div>
+        </div>
+      </header>
+      <main id="main" tabindex="-1">
+        <div id="stats" class="stats"></div>
+        <section id="field-panel" hidden></section>
+        <div id="operational-layout" class="operational-layout">
+          <section class="incidents-panel panel" aria-label="Cola de avisos">
+            <div class="panel-heading">
+              <strong id="list-title">Avisos</strong
+              ><span id="incident-count" class="count">0</span>
+            </div>
+            <label class="search-field"
+              ><span aria-hidden="true" id="search-icon"></span
+              ><input
+                id="incident-search"
+                type="search"
+                placeholder="Buscar aviso…  ( / )"
+                aria-label="Buscar intervención"
+            /></label>
+            <div class="filter-tabs" id="incident-filters">
+              <button data-filter="open" class="active">Activas</button
+              ><button data-filter="closed">Cerradas</button
+              ><button data-filter="all">Todas</button>
+            </div>
+            <div id="incident-list" class="incident-list"></div>
+          </section>
+          <section class="map-panel panel" aria-label="Mapa de operaciones">
+            <div id="map" aria-label="Mapa interactivo de Málaga"></div>
+            <div class="map-overlay top">
+              <span class="map-chip"
+                ><span class="live-dot"></span>Málaga · en vivo</span
+              >
+              <button id="fit-map" class="map-chip button-chip">
+                Ver todo
+              </button>
+            </div>
+            <div class="map-overlay bottom map-legend">
+              <span><i class="legend-dot critical"></i>Crítica</span
+              ><span><i class="legend-dot high"></i>Alta</span
+              ><span><i class="legend-dot medium"></i>Media</span
+              ><span><i class="legend-dot low"></i>Baja</span
+              ><span><i class="legend-dot unit"></i>Dotación</span
+              ><span id="map-note"
+                >Pulsa el mapa para fijar un nuevo aviso</span
+              >
+            </div>
+            <div id="map-fallback" hidden class="map-fallback">
+              Sin acceso a cartografía. Las coordenadas siguen disponibles.
+            </div>
+          </section>
+          <section id="detail" class="detail-panel panel"></section>
+          <section
+            id="unit-board"
+            class="unit-board panel"
+            aria-label="Dotaciones"
+          ></section>
+        </div>
+        <section id="admin-panel" hidden></section>
+        <section id="history-panel" hidden></section>
+        <section id="radio-panel" hidden></section>
+        <footer class="page-footer">
+          <span>BRIGADA MÁLAGA · Entorno local, no operativo</span
+          ><span id="sync-label">Esperando al servidor</span>
+        </footer>
+      </main>
+    </div>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <dialog id="editor">
+      <form id="editor-form">
+        <div class="dialog-heading">
+          <div>
+            <span class="eyebrow">Brigada Málaga</span>
+            <h2 id="editor-title"></h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button"
+            id="close-editor"
+            aria-label="Cerrar formulario"
+          >
+            ×
+          </button>
+        </div>
+        <div id="editor-fields"></div>
+        <p id="form-error" class="form-error" role="alert"></p>
+        <div class="dialog-footer">
+          <button type="button" class="button secondary" id="cancel-editor">
+            Cancelar</button
+          ><button type="submit" class="button primary" id="save-editor">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>

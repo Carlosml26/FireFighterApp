@@ -1,0 +1,16 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+node_modules/
+serverDB/node_modules/
+coverage/
+dist/
+*.log
+v2/data/
+v2/test-results/
+v2/playwright-report/
+# Local SQLite files, including custom DB_PATH values outside v2/data/.
+*.sqlite
+*.sqlite-*
+*.sqlite.bak

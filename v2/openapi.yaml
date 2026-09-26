@@ -1,0 +1,1557 @@
+openapi: 3.1.0
+info:
+  title: Brigada Málaga local API
+  version: 0.2.0
+  description: >-
+    Local development API. The x-actor-id, x-actor-role and conditional
+    x-unit-id headers are client-declared development identities, not production
+    authentication. Only loopback hosts and matching HTTP origins are accepted.
+
+    Operational commands require idempotency-key, scoped to the full actor
+    identity. The default server persists operational state, append-only audit
+    events and replay records atomically in SQLite. Identical retries survive
+    restart; a changed operation or body with the same key returns 409.
+    DB_PATH=:memory: is ephemeral.
+
+    Signaling and presence are ephemeral and do not use operational idempotency.
+    Text and voice travel over WebRTC, never through the HTTP API. JSON bodies
+    are limited to 32768 bytes. See docs/communications.md.
+servers:
+  - url: http://127.0.0.1:4318
+    description: Loopback-only local application
+tags:
+  - name: Application shell
+    description: Static, same-origin reference operations console assets.
+  - name: Health
+  - name: State
+  - name: Audit
+  - name: Units
+  - name: Incidents
+  - name: Assignments
+  - name: Locations
+  - name: Signaling
+    description: Ephemeral rendezvous; direct content uses WebRTC.
+paths:
+  /:
+    get:
+      tags:
+        - Application shell
+      operationId: getApplicationShell
+      summary: Load the reference operations console.
+      security: []
+      responses:
+        "200":
+          description: HTML application shell.
+          content:
+            text/html:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /index.html:
+    get:
+      tags:
+        - Application shell
+      operationId: getApplicationIndex
+      summary: Load the reference operations console HTML.
+      security: []
+      responses:
+        "200":
+          description: HTML application shell.
+          content:
+            text/html:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /app.js:
+    get:
+      tags:
+        - Application shell
+      operationId: getApplicationJavaScript
+      summary: Load the operations console JavaScript.
+      security: []
+      responses:
+        "200":
+          description: JavaScript application bundle.
+          content:
+            text/javascript:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /icon.svg:
+    get:
+      tags:
+        - Application shell
+      operationId: getApplicationIcon
+      summary: Load the application icon.
+      security: []
+      responses:
+        "200":
+          description: SVG application icon.
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /styles.css:
+    get:
+      tags:
+        - Application shell
+      operationId: getApplicationStyles
+      summary: Load the operations console stylesheet.
+      security: []
+      responses:
+        "200":
+          description: CSS stylesheet.
+          content:
+            text/css:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /manifest.webmanifest:
+    get:
+      tags:
+        - Application shell
+      operationId: getWebManifest
+      summary: Load the application web manifest.
+      security: []
+      responses:
+        "200":
+          description: Web application manifest.
+          content:
+            application/manifest+json:
+              schema:
+                type: object
+                additionalProperties: true
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /sw.js:
+    get:
+      tags:
+        - Application shell
+      operationId: getServiceWorker
+      summary: Load the application-shell service worker.
+      security: []
+      responses:
+        "200":
+          description: JavaScript service worker.
+          content:
+            text/javascript:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /health:
+    get:
+      tags:
+        - Health
+      operationId: getHealth
+      summary: Check whether the reference process is responding.
+      security: []
+      responses:
+        "200":
+          description: Process is responding.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /v1/state:
+    get:
+      tags:
+        - State
+      operationId: getAuthorizedState
+      summary: Read the operational state visible to the current actor.
+      description: |-
+        All recognized roles may read state. A `crew_leader` must also send
+        `x-unit-id`; its response is restricted to that unit, its own
+        non-rejected and non-cancelled assignments, the corresponding
+        incidents, and its own latest location. Other roles receive the full
+        current server snapshot, persisted by the SQLite adapter.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/ConditionalUnitId"
+      responses:
+        "200":
+          description: State authorized for the current actor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StateSnapshot"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/audit-events:
+    get:
+      tags:
+        - Audit
+      operationId: listAuditEvents
+      summary: Read the process-local append-only audit event stream.
+      description: Allowed roles are `auditor` and `system_admin`.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      responses:
+        "200":
+          description: Audit events in ascending sequence order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditEventList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/units:
+    post:
+      tags:
+        - Units
+      operationId: registerUnit
+      summary: Register an operational unit.
+      description: Allowed roles are `dispatcher` and `system_admin`.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterUnitCommand"
+      responses:
+        "201":
+          description: Unit registered, or the persisted idempotent result replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/incidents:
+    post:
+      tags:
+        - Incidents
+      operationId: createIncident
+      summary: Open an incident.
+      description: Allowed roles are `dispatcher` and `incident_commander`.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncidentCommand"
+      responses:
+        "201":
+          description: Incident opened, or the persisted idempotent result replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/assignments:
+    post:
+      tags:
+        - Assignments
+      operationId: assignUnit
+      summary: Assign an available unit to an open incident.
+      description: Allowed roles are `dispatcher` and `incident_commander`.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignUnitCommand"
+      responses:
+        "201":
+          description: Pending assignment created, or the persisted idempotent result
+            replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assignment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/assignment-cancellations:
+    post:
+      tags:
+        - Assignments
+      operationId: cancelAssignment
+      summary: Cancel a pending or acknowledged assignment.
+      description: |-
+        Allowed roles are `dispatcher` and `incident_commander`. Cancellation
+        is terminal for the assignment and returns its unit to `available`.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelAssignmentCommand"
+      responses:
+        "201":
+          description: Assignment cancelled, or the persisted idempotent result replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelledAssignment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/assignment-responses:
+    post:
+      tags:
+        - Assignments
+      operationId: respondToAssignment
+      summary: Acknowledge or reject a pending assignment.
+      description: |-
+        Allowed role is `crew_leader`. `x-unit-id` is required and must match
+        the assignment's unit. A rejection requires a reason and releases the
+        unit back to `available`.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/RequiredCrewUnitId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RespondToAssignmentCommand"
+      responses:
+        "201":
+          description: Assignment response recorded, or the persisted idempotent result
+            replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assignment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/unit-status:
+    post:
+      tags:
+        - Units
+      operationId: updateUnitStatus
+      summary: Apply an allowed unit status transition.
+      description: |-
+        Allowed roles are `crew_leader` and `incident_commander`. A crew leader
+        must send `x-unit-id` matching the body `unitId`; an incident commander
+        does not need a unit claim. Moving an on-scene unit to `available`
+        clears its active assignment and emits an additional
+        `assignment.cleared` audit event.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/ConditionalUnitId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUnitStatusCommand"
+      responses:
+        "201":
+          description: Unit status changed, or the persisted idempotent result replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/locations:
+    post:
+      tags:
+        - Locations
+      operationId: recordUnitLocation
+      summary: Record a crew unit's latest accepted location.
+      description: |-
+        Allowed role is `crew_leader`. `x-unit-id` is required and must match
+        the body `unitId`. Positions must be newer than the previously accepted
+        position, no more than 15 minutes old, no more than 30 seconds in the
+        future, and pass the reference movement plausibility check.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/RequiredCrewUnitId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordLocationCommand"
+      responses:
+        "201":
+          description: Location accepted, or the persisted idempotent result replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnitLocation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/incident-closures:
+    post:
+      tags:
+        - Incidents
+      operationId: closeIncident
+      summary: Close an incident after every assignment is terminal.
+      description: |-
+        Allowed roles are `dispatcher` and `incident_commander`. Every
+        assignment for the incident must first be `rejected`, `cancelled`, or
+        `cleared`.
+      security:
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseIncidentCommand"
+      responses:
+        "201":
+          description: Incident closed, or the persisted idempotent result replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/local-context:
+    get:
+      tags:
+        - State
+      operationId: getLocalContext
+      summary: Local development profile directory and storage configuration
+      security: []
+      responses:
+        "200":
+          description: Local profiles (not real user accounts)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalContext"
+  /v1/unit-details:
+    post:
+      tags:
+        - Units
+      operationId: updateUnit
+      summary: Edit metadata, preserving operational state; system_admin only
+      security: &a1
+        - developmentActorId: []
+          developmentActorRole: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUnitCommand"
+      responses:
+        "201":
+          description: Updated unit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+        "400": &a2
+          $ref: "#/components/responses/BadRequest"
+        "401": &a3
+          $ref: "#/components/responses/Unauthorized"
+        "403": &a4
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413": &a5
+          $ref: "#/components/responses/PayloadTooLarge"
+  /v1/peers:
+    post:
+      tags:
+        - Signaling
+      operationId: joinPeerChannel
+      summary: Join an open incident as dispatch or assigned crew
+      security: *a1
+      parameters:
+        - &a6
+          $ref: "#/components/parameters/ConditionalUnitId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - incidentId
+              properties:
+                incidentId:
+                  $ref: "#/components/schemas/Identifier"
+      responses:
+        "200":
+          description: Ephemeral peer credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PeerSession"
+        "400": *a2
+        "401": *a3
+        "403": *a4
+        "413": *a5
+        "429":
+          description: Channel capacity reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      tags:
+        - Signaling
+      operationId: pollPeerChannel
+      summary: Refresh membership and read signals after cursor
+      security: *a1
+      parameters:
+        - *a6
+        - &a8
+          in: header
+          name: x-peer-token
+          required: true
+          schema: &a7
+            type: string
+        - in: query
+          name: peerId
+          required: true
+          schema: *a7
+        - in: query
+          name: after
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Active participants and unacknowledged signals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PeerList"
+        "400": *a2
+        "401": *a3
+        "403": *a4
+        "413": *a5
+  /v1/signals:
+    post:
+      tags:
+        - Signaling
+      operationId: sendPeerSignal
+      summary: Forward SDP or ICE within an incident; never message content
+      security: *a1
+      parameters:
+        - *a6
+        - *a8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PeerSignal"
+      responses:
+        "200":
+          description: Signal accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - accepted
+                properties:
+                  accepted:
+                    const: true
+        "400": *a2
+        "401": *a3
+        "403": *a4
+        "413": *a5
+        "429":
+          description: Pending signal capacity reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/peer-leave:
+    post:
+      tags:
+        - Signaling
+      operationId: leavePeerChannel
+      summary: Leave an ephemeral channel
+      security: *a1
+      parameters:
+        - *a6
+        - *a8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - peerId
+              properties:
+                peerId: *a7
+      responses:
+        "200":
+          description: Session removed
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - disconnected
+                properties:
+                  disconnected:
+                    const: true
+        "400": *a2
+        "401": *a3
+        "403": *a4
+        "413": *a5
+components:
+  securitySchemes:
+    developmentActorId:
+      type: apiKey
+      in: header
+      name: x-actor-id
+      description: |-
+        Required development actor identifier. After trimming it must contain
+        1 to 160 characters. This is not proof of identity.
+    developmentActorRole:
+      type: apiKey
+      in: header
+      name: x-actor-role
+      description: |-
+        Required development actor role. Accepted values are `dispatcher`,
+        `incident_commander`, `crew_leader`, `system_admin`, and `auditor`.
+        This client-supplied claim is not production authorization.
+  parameters:
+    ConditionalUnitId:
+      in: header
+      name: x-unit-id
+      required: false
+      description: |-
+        Required when `x-actor-role` is `crew_leader`; after trimming it must
+        contain 1 to 160 characters. It must identify the unit the crew actor
+        is permitted to access. It is optional for other roles.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 160
+    RequiredCrewUnitId:
+      in: header
+      name: x-unit-id
+      required: true
+      description: |-
+        Required crew unit claim. After trimming it must contain 1 to 160
+        characters and must match the unit addressed by the command.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 160
+    IdempotencyKey:
+      in: header
+      name: idempotency-key
+      required: true
+      description: Non-empty key of at most 160 characters, scoped to actor ID, role
+        and unit ID. Persisted alongside command result and audit when SQLite
+        storage is enabled.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 160
+  responses:
+    BadRequest:
+      description: Invalid JSON, a non-object JSON body, a missing idempotency key, or
+        invalid command fields.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: The development actor ID or role is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The actor role or crew unit claim is not authorized, or the request
+        Host/Origin violates the same-loopback-origin boundary.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: A referenced incident, unit, or assignment was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: The command conflicts with current state, accepted location
+        history, or a prior use of the idempotency key.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PayloadTooLarge:
+      description: The JSON request body exceeds 32768 bytes.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: An unexpected server error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    Role:
+      type: string
+      enum:
+        - dispatcher
+        - incident_commander
+        - crew_leader
+        - system_admin
+        - auditor
+    IncidentPriority:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - critical
+    IncidentStatus:
+      type: string
+      enum:
+        - open
+        - closed
+    AssignmentStatus:
+      type: string
+      enum:
+        - pending
+        - acknowledged
+        - rejected
+        - cancelled
+        - cleared
+    UnitStatus:
+      type: string
+      enum:
+        - available
+        - assigned
+        - en_route
+        - on_scene
+        - unavailable
+    LocationFreshness:
+      type: string
+      enum:
+        - fresh
+        - aging
+        - stale
+      description: |-
+        Derived when state is read: `fresh` through 30 seconds old, `aging`
+        through 120 seconds old, and `stale` thereafter.
+    Identifier:
+      type: string
+      minLength: 1
+    Timestamp:
+      type: string
+      format: date-time
+    Position:
+      type: object
+      description: Timestamped WGS84 position with reported horizontal accuracy.
+      required:
+        - latitude
+        - longitude
+        - accuracyMeters
+        - capturedAt
+      properties:
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        accuracyMeters:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 10000
+        capturedAt:
+          $ref: "#/components/schemas/Timestamp"
+    Unit:
+      type: object
+      required:
+        - id
+        - name
+        - callSign
+        - status
+        - capabilities
+        - activeAssignmentId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/Identifier"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        callSign:
+          type: string
+          minLength: 1
+          maxLength: 40
+        status:
+          $ref: "#/components/schemas/UnitStatus"
+        capabilities:
+          type: array
+          maxItems: 30
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        activeAssignmentId:
+          oneOf:
+            - $ref: "#/components/schemas/Identifier"
+            - type: "null"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+    Incident:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - priority
+        - location
+        - hazards
+        - status
+        - openedAt
+        - closedAt
+        - closeReason
+        - createdBy
+        - updatedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/Identifier"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 4000
+        priority:
+          $ref: "#/components/schemas/IncidentPriority"
+        location:
+          $ref: "#/components/schemas/Position"
+        hazards:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 240
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        openedAt:
+          $ref: "#/components/schemas/Timestamp"
+        closedAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+        closeReason:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
+        createdBy:
+          $ref: "#/components/schemas/Identifier"
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+    Assignment:
+      type: object
+      required:
+        - id
+        - incidentId
+        - unitId
+        - status
+        - assignedAt
+        - assignedBy
+        - respondedAt
+        - respondedBy
+        - rejectionReason
+        - clearedAt
+        - cancelledAt
+        - cancelledBy
+        - cancellationReason
+      properties:
+        id:
+          $ref: "#/components/schemas/Identifier"
+        incidentId:
+          $ref: "#/components/schemas/Identifier"
+        unitId:
+          $ref: "#/components/schemas/Identifier"
+        status:
+          $ref: "#/components/schemas/AssignmentStatus"
+        assignedAt:
+          $ref: "#/components/schemas/Timestamp"
+        assignedBy:
+          $ref: "#/components/schemas/Identifier"
+        respondedAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+        respondedBy:
+          oneOf:
+            - $ref: "#/components/schemas/Identifier"
+            - type: "null"
+        rejectionReason:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+        clearedAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+        cancelledAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+        cancelledBy:
+          oneOf:
+            - $ref: "#/components/schemas/Identifier"
+            - type: "null"
+        cancellationReason:
+          type:
+            - string
+            - "null"
+          maxLength: 500
+    CancelledAssignment:
+      allOf:
+        - $ref: "#/components/schemas/Assignment"
+        - type: object
+          required:
+            - cancelledAt
+            - cancelledBy
+            - cancellationReason
+          properties:
+            status:
+              const: cancelled
+            cancelledAt:
+              $ref: "#/components/schemas/Timestamp"
+            cancelledBy:
+              $ref: "#/components/schemas/Identifier"
+            cancellationReason:
+              type: string
+              minLength: 1
+              maxLength: 500
+    UnitLocation:
+      allOf:
+        - $ref: "#/components/schemas/Position"
+        - type: object
+          required:
+            - unitId
+            - receivedAt
+            - source
+          properties:
+            unitId:
+              $ref: "#/components/schemas/Identifier"
+            receivedAt:
+              $ref: "#/components/schemas/Timestamp"
+            source:
+              type: string
+              minLength: 1
+              maxLength: 60
+    UnitLocationSnapshot:
+      allOf:
+        - $ref: "#/components/schemas/UnitLocation"
+        - type: object
+          required:
+            - freshness
+          properties:
+            freshness:
+              $ref: "#/components/schemas/LocationFreshness"
+    StateSnapshot:
+      type: object
+      required:
+        - incidents
+        - units
+        - assignments
+        - locations
+      properties:
+        incidents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Incident"
+        units:
+          type: array
+          items:
+            $ref: "#/components/schemas/Unit"
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Assignment"
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/UnitLocationSnapshot"
+    AuditSubject:
+      type: object
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum:
+            - incident
+            - assignment
+            - unit
+        id:
+          $ref: "#/components/schemas/Identifier"
+    IncidentAuditDetails:
+      type: object
+      required:
+        - status
+        - priority
+      properties:
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        priority:
+          $ref: "#/components/schemas/IncidentPriority"
+    UnitAuditDetails:
+      type: object
+      required:
+        - status
+        - callSign
+      properties:
+        status:
+          $ref: "#/components/schemas/UnitStatus"
+        callSign:
+          type: string
+          minLength: 1
+          maxLength: 40
+    AssignmentAuditDetails:
+      type: object
+      required:
+        - incidentId
+        - unitId
+        - status
+      properties:
+        incidentId:
+          $ref: "#/components/schemas/Identifier"
+        unitId:
+          $ref: "#/components/schemas/Identifier"
+        status:
+          $ref: "#/components/schemas/AssignmentStatus"
+    LocationAuditDetails:
+      type: object
+      required:
+        - capturedAt
+        - accuracyMeters
+        - source
+      properties:
+        capturedAt:
+          $ref: "#/components/schemas/Timestamp"
+        accuracyMeters:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 10000
+        source:
+          type: string
+          minLength: 1
+          maxLength: 60
+    AuditEvent:
+      type: object
+      required:
+        - id
+        - sequence
+        - type
+        - actorId
+        - actorRole
+        - occurredAt
+        - subject
+        - details
+        - idempotencyKey
+      properties:
+        id:
+          $ref: "#/components/schemas/Identifier"
+        sequence:
+          type: integer
+          minimum: 1
+        type:
+          type: string
+          enum:
+            - unit.registered
+            - incident.created
+            - unit.assigned
+            - assignment.acknowledged
+            - assignment.rejected
+            - assignment.cancelled
+            - unit.status_changed
+            - assignment.cleared
+            - unit.location_recorded
+            - incident.closed
+            - unit.updated
+        actorId:
+          $ref: "#/components/schemas/Identifier"
+        actorRole:
+          $ref: "#/components/schemas/Role"
+        occurredAt:
+          $ref: "#/components/schemas/Timestamp"
+        subject:
+          $ref: "#/components/schemas/AuditSubject"
+        details:
+          oneOf:
+            - $ref: "#/components/schemas/IncidentAuditDetails"
+            - $ref: "#/components/schemas/UnitAuditDetails"
+            - $ref: "#/components/schemas/AssignmentAuditDetails"
+            - $ref: "#/components/schemas/LocationAuditDetails"
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 160
+    AuditEventList:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+    RegisterUnitCommand:
+      type: object
+      required:
+        - name
+        - callSign
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        callSign:
+          type: string
+          minLength: 1
+          maxLength: 40
+        capabilities:
+          type: array
+          maxItems: 30
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+    CreateIncidentCommand:
+      type: object
+      required:
+        - title
+        - priority
+        - location
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 4000
+        priority:
+          $ref: "#/components/schemas/IncidentPriority"
+        location:
+          allOf:
+            - $ref: "#/components/schemas/Position"
+          description: Must be no more than five minutes old and no more than 30 seconds
+            in the future.
+        hazards:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 240
+    AssignUnitCommand:
+      type: object
+      required:
+        - incidentId
+        - unitId
+      properties:
+        incidentId:
+          $ref: "#/components/schemas/Identifier"
+        unitId:
+          $ref: "#/components/schemas/Identifier"
+    CancelAssignmentCommand:
+      type: object
+      required:
+        - assignmentId
+        - reason
+      properties:
+        assignmentId:
+          $ref: "#/components/schemas/Identifier"
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    RespondToAssignmentCommand:
+      type: object
+      required:
+        - assignmentId
+        - decision
+      properties:
+        assignmentId:
+          $ref: "#/components/schemas/Identifier"
+        decision:
+          type: string
+          enum:
+            - acknowledge
+            - reject
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      allOf:
+        - if:
+            properties:
+              decision:
+                const: reject
+          then:
+            required:
+              - reason
+    UpdateUnitStatusCommand:
+      type: object
+      required:
+        - unitId
+        - status
+      properties:
+        unitId:
+          $ref: "#/components/schemas/Identifier"
+        status:
+          $ref: "#/components/schemas/UnitStatus"
+    RecordLocationCommand:
+      type: object
+      required:
+        - unitId
+        - position
+      properties:
+        unitId:
+          $ref: "#/components/schemas/Identifier"
+        position:
+          allOf:
+            - $ref: "#/components/schemas/Position"
+          description: Must be no more than 15 minutes old and no more than 30 seconds in
+            the future.
+        source:
+          type:
+            - string
+            - "null"
+          maxLength: 60
+          description: Empty or null values are normalized to `device_gnss`.
+    CloseIncidentCommand:
+      type: object
+      required:
+        - incidentId
+        - reason
+      properties:
+        incidentId:
+          $ref: "#/components/schemas/Identifier"
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    Health:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          const: ok
+    ErrorCode:
+      type: string
+      enum:
+        - validation_error
+        - invalid_json
+        - unauthenticated
+        - forbidden
+        - not_found
+        - conflict
+        - invalid_transition
+        - idempotency_conflict
+        - stale_location
+        - implausible_location
+        - body_too_large
+        - internal_error
+    ErrorDetails:
+      type: object
+      properties:
+        activeAssignmentIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/Identifier"
+      additionalProperties: true
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              $ref: "#/components/schemas/ErrorCode"
+            message:
+              type: string
+            details:
+              $ref: "#/components/schemas/ErrorDetails"
+    LocalContext:
+      type: object
+      required:
+        - mode
+        - persistent
+        - training
+        - units
+      properties:
+        mode:
+          const: local-development
+        persistent:
+          type: boolean
+        training:
+          type: boolean
+        units:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - callSign
+              - name
+            properties:
+              id:
+                $ref: "#/components/schemas/Identifier"
+              callSign: *a7
+              name: *a7
+    UpdateUnitCommand:
+      allOf:
+        - $ref: "#/components/schemas/RegisterUnitCommand"
+        - type: object
+          required:
+            - unitId
+          properties:
+            unitId:
+              $ref: "#/components/schemas/Identifier"
+    PeerSession:
+      type: object
+      required:
+        - peerId
+        - token
+      properties:
+        peerId: *a7
+        token: *a7
+    PeerList:
+      type: object
+      required:
+        - peers
+        - signals
+        - cursor
+      properties:
+        peers:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - label
+            properties:
+              id: *a7
+              label: *a7
+        signals:
+          type: array
+          items:
+            type: object
+            description: Negotiation envelope with sequence, from and description or
+              candidate.
+        cursor:
+          type: integer
+          minimum: 0
+    PeerSignal:
+      type: object
+      required:
+        - peerId
+        - targetId
+      properties:
+        peerId: *a7
+        targetId: *a7
+        description:
+          type: object
+          required:
+            - type
+            - sdp
+          properties:
+            type:
+              enum:
+                - offer
+                - answer
+            sdp: *a7
+        candidate:
+          type: object
+          required:
+            - candidate
+          properties:
+            candidate: *a7
+            sdpMid:
+              type:
+                - string
+                - "null"
+            sdpMLineIndex:
+              type:
+                - integer
+                - "null"
+      anyOf:
+        - required:
+            - description
+        - required:
+            - candidate
